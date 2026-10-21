@@ -46,4 +46,12 @@ jobs:
         run: |
           $version=([xml](Get-Content ./src/FlydigiKeyMapper.csproj)).Project.PropertyGroup.Version
           if ('${{ github.ref_name }}' -ne "v$version") { throw 'Tag and app version must match' }
-          gh release create '${{ github.ref_name }}' artifacts/FlydigiKeyMapper-Setup-*-x64.exe artifacts/SHA256SUMS.txt artifacts/usbpcap-src-incl-pdb-1.5.4.0.7z artifacts/USBPcap-LICENSES.txt --title "Flydigi Key Mapper $version" --generate-notes
+          $PSNativeCommandUseErrorActionPreference=$false
+          gh release view '${{ github.ref_name }}' --json url 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'An existing release or draft is preserved.'
+          } else {
+            gh release create '${{ github.ref_name }}' artifacts/FlydigiKeyMapper-Setup-*-x64.exe artifacts/SHA256SUMS.txt artifacts/usbpcap-src-incl-pdb-1.5.4.0.7z artifacts/USBPcap-LICENSES.txt --title "Flydigi Key Mapper $version" --generate-notes
+            if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
+          }
+

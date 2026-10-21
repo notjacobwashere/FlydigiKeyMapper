@@ -2,6 +2,7 @@ Unicode true
 !include "MUI2.nsh"
 !include "x64.nsh"
 !include "LogicLib.nsh"
+!include "WinVer.nsh"
 !ifndef VERSION
  !define VERSION "0.1.0"
 !endif
@@ -86,6 +87,10 @@ Function CheckClosed
  ${EndIf}
 FunctionEnd
 Function .onInit
+ ${IfNot} ${AtLeastWin10}
+  MessageBox MB_ICONSTOP "Windows 10 or newer is required."
+  Abort
+ ${EndIf}
  ${IfNot} ${RunningX64}
   MessageBox MB_ICONSTOP "This release requires 64-bit Windows."
   Abort
@@ -126,6 +131,7 @@ Section "Uninstall"
  DeleteRegKey HKLM "Software\FlydigiKeyMapper"
  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\FlydigiKeyMapper"
 SectionEnd
+
 
 
 
