@@ -8,7 +8,7 @@ sealed class UpdatesPage:UserControl {
  readonly TextBox notes=new(){Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill,BackColor=Color.FromArgb(30,32,42),ForeColor=Color.White};
  readonly CancellationTokenSource stop=new();ReleaseInfo? latest;
  public UpdatesPage(){Dock=DockStyle.Fill;Padding=new Padding(22);BackColor=Color.FromArgb(23,25,33);ForeColor=Color.White;
-  var buttons=new FlowLayoutPanel{Dock=DockStyle.Top,Height=45};foreach(var button in new[]{check,download,release})button.ForeColor=Color.Black;buttons.Controls.AddRange(new Control[]{check,download,release});
+  var buttons=new FlowLayoutPanel{Dock=DockStyle.Top,Height=45};foreach(var button in new[]{check,download,release}){button.ForeColor=Color.White;button.BackColor=Color.FromArgb(55,60,75);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderColor=Color.FromArgb(85,90,105);}buttons.Controls.AddRange(new Control[]{check,download,release});
   var description=new Label{Text=$"Installed: {UpdateService.Current.ToString(3)}\r\n{UpdateService.Repository}",Dock=DockStyle.Top,Height=55};
   var dependencies=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=85,FlowDirection=FlowDirection.TopDown};dependencies.Controls.Add(new Label{Text="Required: Flydigi Space Station for Xbox + USBPcap. Close the Store app while mapping.",AutoSize=true});
   var store=new LinkLabel{Text="Get Flydigi's official Store app",AutoSize=true,LinkColor=Color.LightSkyBlue};store.LinkClicked+=(_,_)=>Open(VendorRuntime.StoreUrl);dependencies.Controls.Add(store);
@@ -19,5 +19,6 @@ sealed class UpdatesPage:UserControl {
  async Task Check(){check.Enabled=false;download.Enabled=false;state.Text="Checking GitHub…";try{latest=await UpdateService.Check(stop.Token);if(IsDisposed)return;if(latest==null){state.Text="No public release is available yet.";notes.Text="";}else{state.Text=latest.Version>UpdateService.Current?$"Version {latest.Tag} is available.":"You have the latest version.";notes.Text=latest.Notes;download.Enabled=latest.Version>UpdateService.Current&&latest.Installer!=null;}}catch(OperationCanceledException){}catch(Exception e){if(!IsDisposed)state.Text="Could not check for updates: "+e.Message;}finally{if(!IsDisposed)check.Enabled=true;}}
  protected override void Dispose(bool disposing){if(disposing)stop.Cancel();base.Dispose(disposing);}
 }
+
 
 
