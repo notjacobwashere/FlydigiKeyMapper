@@ -1,0 +1,14 @@
+artifacts/
+tools/
+**/bin/
+**/obj/
+*.user
+*.pdb
+*.dmp
+*.pcap
+settings.json
+*-events.txt
+*.log
+**/VendorRuntimeCache/
+installer/uninstall-files.nsh
+*-preview.png
