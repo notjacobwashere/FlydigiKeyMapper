@@ -18,9 +18,11 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "FileDescription" "Flydigi Key Mapper Setup"
 VIAddVersionKey "LegalCopyright" "Copyright notjacobwashere"
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TEXT "Map the Vader 5S extra buttons to keyboard and numpad keys.\r\n\r\nRequires Flydigi Space Station for Xbox from Microsoft Store. Its proprietary files are not bundled.\r\n\r\nSetup can install USBPcap's official signed USB filter. Restart Windows afterward. Only one Vader 5S is supported at a time."
+!define MUI_WELCOMEPAGE_TEXT "Map the Vader 5S extra buttons to keyboard and numpad keys.$\r$\n$\r$\nRequires Flydigi Space Station for Xbox from Microsoft Store. Its proprietary files are not bundled.$\r$\n$\r$\nSetup can install USBPcap's official signed USB filter. Restart Windows afterward. Only one Vader 5S is supported at a time."
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
-!define MUI_FINISHPAGE_TEXT "Setup is complete. If USBPcap was installed, save your work and restart Windows before using the mapper. Setup will not restart your PC automatically.\r\n\r\nInstall Flydigi Space Station for Xbox from Microsoft Store if needed, then close it while using the mapper."
+!define MUI_FINISHPAGE_RUN "$INSTDIR\FlydigiKeyMapper.exe"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch Flydigi Key Mapper"
+!define MUI_FINISHPAGE_TEXT "Setup is complete. If USBPcap was installed, save your work and restart Windows before using the mapper. Setup will not restart your PC automatically.$\r$\n$\r$\nInstall Flydigi Space Station for Xbox from Microsoft Store if needed, then close it while using the mapper."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
@@ -131,6 +133,7 @@ Section "Uninstall"
  DeleteRegKey HKLM "Software\FlydigiKeyMapper"
  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\FlydigiKeyMapper"
 SectionEnd
+
 
 
 

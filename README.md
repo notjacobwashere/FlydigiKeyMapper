@@ -7,7 +7,7 @@ Map the **Flydigi Vader 5S** extra buttons **C, Z, LM, RM, M1 and M2** to keyboa
 ## Install
 
 1. Install [Flydigi Space Station for Xbox from Microsoft Store](https://apps.microsoft.com/detail/9NB9DQG1BN6P). Its component is required; Flydigi's proprietary files are not included in our downloads.
-2. Run `FlydigiKeyMapper-Setup-<version>-x64.exe`. Setup installs the app and offers the official signed **USBPcap 1.5.4.0** USB filter if it is missing. A separate .NET installation is unnecessary.
+2. Run `FlydigiKeyMapper-Setup-<version>-x64.exe`. The checked **Launch Flydigi Key Mapper** option opens the app when you click Finish; uncheck it to skip launching. Setup installs the app and offers the official signed **USBPcap 1.5.4.0** USB filter if it is missing. A separate .NET installation is unnecessary.
 3. If setup installed USBPcap, save your work and restart Windows. Setup never restarts Windows automatically.
 4. Close Flydigi's Store app and any other controller capture tools. Connect **one Vader 5S by USB** and open Flydigi Key Mapper from Start. Administrator approval is required for USB capture.
 
@@ -59,3 +59,4 @@ The GitHub workflow builds pull requests and `main`, and publishes an installer 
 ## License
 
 Our code is [MIT licensed](LICENSE). [Third-party notices](THIRD-PARTY-NOTICES.md) cover USBPcap, Microsoft runtime/interoperability files and the separate Flydigi dependency. Each installer includes USBPcap's complete matching source archive and license texts; they are also release assets.
+
