@@ -4,7 +4,7 @@ Unicode true
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
 !ifndef VERSION
- !define VERSION "0.1.0"
+ !define VERSION "0.1.1"
 !endif
 Name "Flydigi Key Mapper ${VERSION}"
 OutFile "..\artifacts\FlydigiKeyMapper-Setup-${VERSION}-x64.exe"
@@ -18,11 +18,11 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "FileDescription" "Flydigi Key Mapper Setup"
 VIAddVersionKey "LegalCopyright" "Copyright notjacobwashere"
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TEXT "Map the Vader 5S extra buttons to keyboard and numpad keys.$\r$\n$\r$\nRequires Flydigi Space Station for Xbox from Microsoft Store. Its proprietary files are not bundled.$\r$\n$\r$\nSetup can install USBPcap's official signed USB filter. Restart Windows afterward. Only one Vader 5S is supported at a time."
+!define MUI_WELCOMEPAGE_TEXT "Map the Vader 5S extra buttons to keyboard and numpad keys.$\r$\n$\r$\nSetup gets the required Flydigi app from Microsoft Store if missing. Store approval or sign-in may be required.$\r$\n$\r$\nSetup can install USBPcap's official signed USB filter. Restart Windows afterward. Only one Vader 5S is supported at a time."
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !define MUI_FINISHPAGE_RUN "$INSTDIR\FlydigiKeyMapper.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch Flydigi Key Mapper"
-!define MUI_FINISHPAGE_TEXT "Setup is complete. If USBPcap was installed, save your work and restart Windows before using the mapper. Setup will not restart your PC automatically.$\r$\n$\r$\nInstall Flydigi Space Station for Xbox from Microsoft Store if needed, then close it while using the mapper."
+!define MUI_FINISHPAGE_TEXT "Setup is complete. If USBPcap was installed, save your work and restart Windows before using the mapper. Setup will not restart your PC automatically.$\r$\n$\r$\nClose Flydigi Space Station while using the mapper."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
@@ -79,6 +79,17 @@ Section "USBPcap driver (restart required if missing)" Driver
   DetailPrint "Existing USBPcap installation kept."
  ${EndIf}
 SectionEnd
+Section "Flydigi Store dependency (download if missing)" Flydigi
+ SectionIn RO
+ InitPluginsDir
+ SetOutPath "$PLUGINSDIR"
+ File "install-flydigi.ps1"
+ DetailPrint "Checking Flydigi Store dependency..."
+ ExecWait '"$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$PLUGINSDIR\install-flydigi.ps1"' $0
+ ${If} $0 != 0
+  MessageBox MB_ICONEXCLAMATION "Flydigi dependency was not installed. Run setup again to complete dependency installation before using the mapper."
+ ${EndIf}
+SectionEnd
 Function CheckClosed
  retry:
  System::Call 'kernel32::OpenMutexW(i 0x100000, i 0, w "Local\FlydigiKeyMapper") p.r0'
@@ -133,9 +144,3 @@ Section "Uninstall"
  DeleteRegKey HKLM "Software\FlydigiKeyMapper"
  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\FlydigiKeyMapper"
 SectionEnd
-
-
-
-
-
-
