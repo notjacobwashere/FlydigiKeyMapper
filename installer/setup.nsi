@@ -3,8 +3,9 @@ Unicode true
 !include "x64.nsh"
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
+!include "FileFunc.nsh"
 !ifndef VERSION
- !define VERSION "0.1.1"
+ !define VERSION "0.1.2"
 !endif
 Name "Flydigi Key Mapper ${VERSION}"
 OutFile "..\artifacts\FlydigiKeyMapper-Setup-${VERSION}-x64.exe"
@@ -108,7 +109,27 @@ Function .onInit
   MessageBox MB_ICONSTOP "This release requires 64-bit Windows."
   Abort
  ${EndIf}
+ ; During an in-app upgrade, wait for the old mapper to release its files and USB capture.
+ ${GetParameters} $R0
+ ${GetOptions} $R0 "/UPDATEPID=" $R1
+ ${If} $R1 != ""
+  System::Call 'kernel32::OpenProcess(i 0x100000, i 0, i R1) p.r2'
+  ${If} $2 != 0
+   System::Call 'kernel32::WaitForSingleObject(p r2, i 30000) i.r3'
+   System::Call 'kernel32::CloseHandle(p r2)'
+   ${If} $3 != 0
+    MessageBox MB_ICONSTOP "The mapper did not exit. Update cancelled; your existing installation is unchanged."
+    Abort
+   ${EndIf}
+  ${EndIf}
+ ${EndIf}
  Call CheckClosed
+FunctionEnd
+Function .onInstSuccess
+ ; Silent in-app upgrades have no Finish page, so relaunch explicitly.
+ IfSilent 0 done
+ Exec '"$INSTDIR\FlydigiKeyMapper.exe"'
+ done:
 FunctionEnd
 Function un.onInit
  System::Call 'kernel32::OpenMutexW(i 0x100000, i 0, w "Local\FlydigiKeyMapper") p.r0'

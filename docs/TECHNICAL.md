@@ -32,8 +32,7 @@ The app loads Flydigi's command component from the user's installed Store app, i
 
 ## Updates
 
-Open the **Updates** tab and select **Check for updates**. It checks the latest stable public release in this repository, displays its version and notes, and enables **Download installer** for a newer version with a matching installer asset. Download opens the official GitHub asset; the app does not silently execute an update. Exit the mapper before running a newer installer. Future releases use `v<major>.<minor>.<patch>` tags.
-
+Open the **Updates** tab and select **Check for updates**, then **Download and install**. The mapper downloads the latest stable EXE directly, checks its byte count and GitHub-provided SHA-256 digest, and starts setup. It exits cleanly to release keys, capture and file handles; setup waits for that process to exit before replacing files. Setup preserves mappings and relaunches the mapper. Windows may request administrator approval. Failed verification or a cancelled approval leaves the current app running. Releases without a SHA-256 digest cannot install automatically. Version 0.1.2 introduces this flow; earlier installed versions need one manual upgrade.
 ## Compatibility and limits
 
 * Windows x64, Vader 5S USB mode, one matching controller at a time. Other Flydigi models, wireless/Bluetooth connections and multiple Vader 5S controllers are not supported by this release.
