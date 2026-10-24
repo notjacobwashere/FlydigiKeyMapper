@@ -113,6 +113,14 @@ Function .onInit
  ${GetParameters} $R0
  ${GetOptions} $R0 "/UPDATEPID=" $R1
  ${If} $R1 != ""
+  ; Ask the targeted old instance to exit through its existing graceful-exit message.
+  FindWindow $R2 "" "Flydigi Key Mapper"
+  ${If} $R2 != 0
+   System::Call 'user32::GetWindowThreadProcessId(p R2, *i .r4)'
+   ${If} $4 == $R1
+    System::Call 'user32::PostMessageW(p R2, i 0x808d, p 0, p 0)'
+   ${EndIf}
+  ${EndIf}
   System::Call 'kernel32::OpenProcess(i 0x100000, i 0, i R1) p.r2'
   ${If} $2 != 0
    System::Call 'kernel32::WaitForSingleObject(p r2, i 30000) i.r3'
