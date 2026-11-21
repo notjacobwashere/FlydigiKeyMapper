@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+* Redesigned Mappings, App rules, Settings, and Updates pages.
+* Enable or pause mapping for individual foreground apps by executable name or path.
+* Pause mapping from the window or tray. Buttons held while paused must be released before they map again.
+* Choose from three themes and four accent colors, and adjust startup, tray, and logging behavior.
+* Existing key assignments and the GTA/FiveM preference carry over.
+
 ## 0.1.0
 
 * Six independent Vader 5S extra-button mappings to keyboard/numpad keys.
