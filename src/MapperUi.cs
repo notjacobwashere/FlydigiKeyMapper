@@ -118,12 +118,12 @@ sealed partial class Mapper
     Control BuildMappings()
     {
         var hero = new Surface { Padding = new Padding(20, 11, 14, 10) };
-        var heroColumns = Ui.Columns(-54, -46);
+        var heroColumns = Ui.Columns(-35, -65);
         var details = Ui.Rows(25, 23, 47, 23, 0);
         details.Controls.Add(Ui.Text("CONTROLLER  /  USB", 9, true, Tone.Accent), 0, 1);
         details.Controls.Add(Ui.Text("Vader 5S", 27, true), 0, 2);
         details.Controls.Add(controllerState, 0, 3);
-        details.Controls.Add(Ui.Text("Press an extra button to see it light up.", 9, tone: Tone.Muted), 0, 4);
+        details.Controls.Add(Ui.Text("Press a button or move a stick to test it.", 9, tone: Tone.Muted), 0, 4);
         heroColumns.Controls.Add(details, 0, 0);
         heroColumns.Controls.Add(diagram, 1, 0);
         hero.Controls.Add(heroColumns);
@@ -184,10 +184,10 @@ sealed partial class Mapper
         }
 
         bindings.Controls.Add(rows);
-        var page = Ui.Rows(169, 13, 356, 0);
+        var page = Ui.Rows(202, 13, 356, 0);
         page.Controls.Add(hero, 0, 0);
         page.Controls.Add(bindings, 0, 2);
-        return ScrollPage(page, 538);
+        return ScrollPage(page, 571);
     }
 
     static TableLayoutPanel BindingColumns() => Ui.Columns(82, -40, -60, 82, 65);
@@ -425,6 +425,7 @@ sealed partial class Mapper
         routeState.Text = settings.MappingEnabled && routeAllowed ? "●  Mapping active" : "○  Mapping paused";
         routeState.ForeColor = settings.MappingEnabled && routeAllowed ? palette.Highlight : palette.Muted;
         appDecisionLabel.Text = !settings.MappingEnabled ? "Global mapper is off"
+            : currentApp.ProcessId == Environment.ProcessId ? "Paused while the mapper is focused"
             : $"{currentApp.DisplayName}  /  {(routeAllowed ? "Enabled" : "Paused")}";
     }
 
@@ -446,10 +447,25 @@ sealed partial class Mapper
     {
         Show();
         Application.DoEvents();
-        currentApp = new ForegroundApp(IntPtr.Zero, 0, "FlydigiKeyMapper.exe", "");
+        currentApp = new ForegroundApp(IntPtr.Zero, (uint)Environment.ProcessId, "FlydigiKeyMapper.exe", "");
+        routeAllowed = AllowsOutput(currentApp, out matchedRule);
         controllerState.Text = "Vader 5S USB input preview";
         RenderRoute();
         SavePreviews();
+        ShowPage(0);
+        diagram.SetActive(0, true);
+        diagram.SetActive(3, true);
+        diagram.SetActive(5, true);
+        diagram.UpdateStandardControls(new Native.Pad
+        {
+            buttons = (ushort)(PadButton.Y | PadButton.Up | PadButton.Right | PadButton.RightStick | PadButton.LeftBumper),
+            rt = 180, lx = -24000, ly = 12000
+        });
+        CapturePage("controller-active");
+        diagram.SetActive(0, false);
+        diagram.SetActive(3, false);
+        diagram.SetActive(5, false);
+        diagram.UpdateStandardControls(default);
         settings.Appearance = Appearance.Light;
         ApplyTheme();
         ShowPage(0);

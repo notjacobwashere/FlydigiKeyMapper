@@ -201,8 +201,15 @@ sealed partial class Mapper : Form, IMessageFilter
     void SyncRoute()
     {
         currentApp = foreground.Read();
-        matchedRule = AppRouting.Match(settings.AppRules, currentApp);
-        routeAllowed = AppRouting.Allows(settings.EffectiveScope, matchedRule, currentApp.Executable);
+        routeAllowed = AllowsOutput(currentApp, out matchedRule);
+    }
+
+    bool AllowsOutput(ForegroundApp app, out AppRule? rule)
+    {
+        // Keep the mapper a safe place to test the controller and edit keyboard bindings.
+        rule = app.ProcessId == Environment.ProcessId ? null : AppRouting.Match(settings.AppRules, app);
+        return app.ProcessId != Environment.ProcessId
+            && AppRouting.Allows(settings.EffectiveScope, rule, app.Executable);
     }
 
     void UpdateSource(string prefix, IEnumerable<string> inputs)
@@ -226,11 +233,15 @@ sealed partial class Mapper : Form, IMessageFilter
         var now = Environment.TickCount64;
         if (listening >= 0 && now > listenDeadline) CancelListening();
         UpdateSource("V:", vendor?.Poll() ?? []);
+        Native.Pad previewPad = default;
+        int connectedPads = 0;
         for (uint i = 0; i < 4; i++)
         {
             var buttons = new List<string>();
             if (Native.XInputGetState(i, out var state) == 0)
             {
+                previewPad = state.pad;
+                connectedPads++;
                 for (int bit = 0; bit < 16; bit++)
                     if ((state.pad.buttons & (1 << bit)) != 0) buttons.Add($"X:{i}:{bit}");
                 if (state.pad.lt > 160) buttons.Add($"X:{i}:LT");
@@ -238,6 +249,7 @@ sealed partial class Mapper : Form, IMessageFilter
             }
             UpdateSource($"X:{i}:", buttons);
         }
+        diagram.UpdateStandardControls(connectedPads == 1 ? previewPad : default);
         if (now >= nextDeviceCheck)
         {
             nextDeviceCheck = now + 1000;
@@ -475,6 +487,10 @@ sealed partial class Mapper : Form, IMessageFilter
         Check(AppRouting.NormalizeTarget(" notepad ") == "notepad.exe"
             && AppRouting.NormalizeTarget(@"Games\test.exe") == "" && AppRouting.NormalizeTarget("*.exe") == "",
             "App rule target validation");
+        var mapperWindow = new ForegroundApp(IntPtr.Zero, (uint)Environment.ProcessId, "FlydigiKeyMapper.exe", "");
+        mapper.settings.AppRules.Add(new AppRule { Target = mapperWindow.Executable, Action = AppAction.Enable });
+        Check(!mapper.AllowsOutput(mapperWindow, out _) && mapper.AllowsOutput(note, out _),
+            "Controller keyboard output pauses in the mapper even with an enable rule");
         legacy.MappingEnabled = false;
         legacy.CloseToTray = false;
         legacy.Appearance = Appearance.Light;
@@ -495,6 +511,16 @@ sealed partial class Mapper : Form, IMessageFilter
         mapper.UpdateSource("V:", []);
         mapper.ApplyMappings(true);
         Check(mapper.blockedUntilReleased.Count == 0, "Physical release re-arms the input");
+        var preview = ControllerActivity.From(new Native.Pad
+        {
+            buttons = (ushort)(PadButton.A | PadButton.Up | PadButton.LeftStick),
+            lt = 80, rt = 3, lx = short.MinValue, ly = short.MaxValue, rx = 900, ry = -850
+        });
+        Check(preview.IsDown(PadButton.A) && preview.IsDown(PadButton.Up) && preview.IsDown(PadButton.LeftStick)
+            && !preview.IsDown(PadButton.B), "Preview tracks simultaneous standard buttons and a stick click");
+        Check(preview.LeftTrigger > 0 && preview.RightTrigger == 0 && preview.LeftStick.X < 0
+            && preview.LeftStick.Y < 0 && preview.RightStick.IsEmpty,
+            "Preview handles analog triggers, stick direction, and neutral jitter");
         return string.Join(Environment.NewLine, results);
     }
 }

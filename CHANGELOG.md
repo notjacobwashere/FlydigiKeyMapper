@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.3
+
+* Stack the standard triggers above the bumpers on the front preview, with the custom bumpers on the rear.
+
+## 0.2.2
+
+* Refit the Vader 5S preview with matching face buttons, distinct shoulder controls and rear paddles.
+* Show live D-pad, face, menu, bumper, trigger, and stick activity when one XInput controller is connected.
+
+## 0.2.1
+
+* Show front and rear views with the Vader 5S extra buttons in their hardware positions.
+* Pause mapped keyboard output while the mapper is focused. Controller activity remains visible.
+
 ## 0.2.0
 
 * Redesigned Mappings, App rules, Settings, and Updates pages.

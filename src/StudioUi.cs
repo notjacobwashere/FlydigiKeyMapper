@@ -358,10 +358,38 @@ sealed class StudioCheckBox : CheckBox
     }
 }
 
+[Flags]
+enum PadButton : ushort
+{
+    Up = 1, Down = 2, Left = 4, Right = 8,
+    Menu = 0x10, View = 0x20, LeftStick = 0x40, RightStick = 0x80,
+    LeftBumper = 0x100, RightBumper = 0x200,
+    A = 0x1000, B = 0x2000, X = 0x4000, Y = 0x8000
+}
+
+readonly record struct ControllerActivity(PadButton Buttons, Point LeftStick, Point RightStick, int LeftTrigger, int RightTrigger)
+{
+    public bool IsDown(PadButton button) => (Buttons & button) != 0;
+
+    public static ControllerActivity From(Native.Pad pad) => new((PadButton)pad.buttons,
+        StickOffset(pad.lx, pad.ly), StickOffset(pad.rx, pad.ry), Trigger(pad.lt), Trigger(pad.rt));
+
+    static Point StickOffset(short rawX, short rawY)
+    {
+        const double idle = 1800;
+        double length = Math.Sqrt((double)rawX * rawX + (double)rawY * rawY);
+        if (length <= idle) return Point.Empty;
+        double scale = 9 * Math.Min(1, (length - idle) / (32767 - idle)) / length;
+        return new((int)Math.Round(rawX * scale), (int)Math.Round(-rawY * scale));
+    }
+
+    static int Trigger(byte value) => value <= 8 ? 0 : (value - 9) / 20 + 1;
+}
+
 sealed class ControllerDiagram : Control
 {
-    static readonly (float X, float Y)[] Positions = [(243, 79), (272, 79), (64, 31), (259, 31), (94, 104), (228, 104)];
     readonly bool[] down = new bool[6];
+    ControllerActivity standard;
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal Palette Palette { get; set; } = Palette.Create(Appearance.Midnight, Accent.Mint);
 
@@ -370,7 +398,7 @@ sealed class ControllerDiagram : Control
         Dock = DockStyle.Fill;
         DoubleBuffered = true;
         ResizeRedraw = true;
-        AccessibleName = "Vader 5S extra button activity";
+        AccessibleName = "Vader 5S front and rear views with live button, trigger, and stick activity";
     }
 
     public void SetActive(int index, bool value)
@@ -380,56 +408,210 @@ sealed class ControllerDiagram : Control
         Invalidate();
     }
 
+    public void UpdateStandardControls(Native.Pad pad)
+    {
+        var activity = ControllerActivity.From(pad);
+        if (activity == standard) return;
+        standard = activity;
+        Invalidate();
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
+        const int width = 435;
+        const int height = 175;
+        float scale = Math.Min((Width - 8) / (float)width, (Height - 4) / (float)height);
+        if (scale <= 0) return;
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-        float scale = Math.Min((Width - 8) / 324f, (Height - 4) / 145f);
-        if (scale <= 0) return;
-        g.TranslateTransform((Width - 324 * scale) / 2, (Height - 145 * scale) / 2);
+        g.TranslateTransform((Width - width * scale) / 2, (Height - height * scale) / 2);
         g.ScaleTransform(scale, scale);
+        g.TranslateTransform(0, 24);
+        DrawView(g, rear: false);
+        g.TranslateTransform(225, 0);
+        DrawView(g, rear: true);
+    }
+
+    void DrawView(Graphics g, bool rear)
+    {
         using var body = new GraphicsPath();
         body.StartFigure();
-        body.AddBezier(22, 96, 24, 67, 35, 24, 55, 17);
-        body.AddBezier(55, 17, 80, 4, 108, 20, 162, 19);
-        body.AddBezier(162, 19, 216, 20, 244, 4, 269, 17);
-        body.AddBezier(269, 17, 289, 24, 300, 67, 302, 96);
-        body.AddBezier(302, 96, 310, 147, 277, 146, 241, 115);
-        body.AddBezier(241, 115, 220, 98, 218, 95, 162, 96);
-        body.AddBezier(162, 96, 106, 95, 104, 98, 83, 115);
-        body.AddBezier(83, 115, 47, 146, 14, 147, 22, 96);
+        body.AddBezier(34, 25, 58, 10, 75, 16, 105, 16);
+        body.AddBezier(105, 16, 135, 16, 152, 10, 176, 25);
+        body.AddBezier(176, 25, 186, 47, 203, 92, 203, 111);
+        body.AddBezier(203, 111, 204, 126, 198, 135, 183, 137);
+        body.AddBezier(183, 137, 167, 123, 155, 109, 145, 108);
+        body.AddBezier(145, 108, 135, 106, 75, 106, 65, 108);
+        body.AddBezier(65, 108, 55, 109, 43, 123, 27, 137);
+        body.AddBezier(27, 137, 12, 135, 6, 126, 7, 111);
+        body.AddBezier(7, 111, 7, 92, 24, 47, 34, 25);
         body.CloseFigure();
-        using var fill = new LinearGradientBrush(new Point(0, 10), new Point(0, 140),
-            Palette.Mix(Palette.Surface, Palette.Highlight, .13), Palette.Field);
-        using var outline = new Pen(Palette.Mix(Palette.Line, Palette.Highlight, .34), 1.7f);
-        using var recessed = new SolidBrush(Palette.Surface);
-        using var details = new Pen(Palette.Muted, 1.2f);
-        g.FillPath(fill, body);
-        g.DrawPath(outline, body);
-        g.FillEllipse(recessed, 82, 44, 31, 31);
-        g.DrawEllipse(outline, 82, 44, 31, 31);
-        g.DrawEllipse(details, 88, 50, 19, 19);
-        g.FillEllipse(recessed, 177, 54, 31, 31);
-        g.DrawEllipse(outline, 177, 54, 31, 31);
-        g.DrawEllipse(details, 183, 60, 19, 19);
-        g.DrawLine(details, 62, 79, 62, 99);
-        g.DrawLine(details, 52, 89, 72, 89);
-        foreach (var point in new[] { (232, 49), (244, 37), (256, 49), (244, 61) })
-            g.DrawEllipse(outline, point.Item1 - 4, point.Item2 - 4, 8, 8);
-        Ui.Glyph(g, "mark", new RectangleF(151, 40, 22, 22), Palette.Highlight);
-        using var font = new Font("Segoe UI", 8, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-        for (int i = 0; i < Positions.Length; i++)
+
+        using var ink = new SolidBrush(Palette.Muted);
+        using var rim = new Pen(Palette.Mix(Palette.Line, Palette.Highlight, .48), 1.25f) { LineJoin = LineJoin.Round };
+        using var detail = new Pen(Palette.Mix(Palette.Line, Palette.Muted, .56), .85f) { LineJoin = LineJoin.Round };
+        using var fill = new LinearGradientBrush(new Point(0, 11), new Point(0, 138),
+            Palette.Mix(Palette.Field, Palette.Highlight, .13), Palette.Field);
+        using var inset = new SolidBrush(Palette.Surface);
+        using var caption = new Font("Segoe UI", 10, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var small = new Font("Segoe UI", 8, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var center = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+
+        void Shape(GraphicsPath path, int glow = 0)
         {
-            var (x, y) = Positions[i];
-            var r = new RectangleF(x - 12, y - 8, 24, 16);
-            using var chip = Ui.Rounded(r, 6);
-            using var plate = new SolidBrush(down[i] ? Palette.Highlight : Palette.Surface);
-            using var ink = new SolidBrush(down[i] ? Palette.HighlightText : Palette.Highlight);
-            g.FillPath(plate, chip);
-            g.DrawPath(outline, chip);
-            g.DrawString(VendorInput.Names[i], font, ink, r, format);
+            using var face = new SolidBrush(glow == 0 ? Palette.Surface
+                : Palette.Mix(Palette.Surface, Palette.Highlight, .54 + Math.Clamp(glow, 1, 13) * .035));
+            g.FillPath(face, path);
+            g.DrawPath(glow == 0 ? detail : rim, path);
         }
+        void Legend(string name, RectangleF rect, bool lit)
+        {
+            using var ink = new SolidBrush(lit ? Palette.HighlightText : Palette.Muted);
+            g.DrawString(name, small, ink, rect, center);
+        }
+        void Pill(RectangleF rect, string name, bool lit)
+        {
+            using var shape = Ui.Rounded(rect, rect.Height / 2);
+            Shape(shape, lit ? 13 : 0);
+            Legend(name, rect, lit);
+        }
+        void Circle(float x, float y, float radius, string label = "", bool lit = false, int glow = 0)
+        {
+            var rect = new RectangleF(x - radius, y - radius, radius * 2, radius * 2);
+            using var circle = new GraphicsPath();
+            circle.AddEllipse(rect);
+            Shape(circle, lit ? 13 : glow);
+            if (label.Length > 0) Legend(label, rect, lit);
+        }
+        void Stick(int x, int y, Point offset, PadButton click)
+        {
+            Circle(x, y, 18);
+            g.DrawEllipse(detail, x - 15, y - 15, 30, 30);
+            // The cap moves inside the ring, with a distinct solid highlight for a click.
+            float capX = x + offset.X * .72f, capY = y + offset.Y * .72f;
+            Circle(capX, capY, 10, lit: standard.IsDown(click), glow: offset.IsEmpty ? 0 : 2);
+            g.DrawEllipse(detail, capX - 7, capY - 7, 14, 14);
+        }
+        void Direction(float x, float y, PadButton direction)
+        {
+            var r = new RectangleF(x - 4, y - 4, 8, 8);
+            if (!standard.IsDown(direction)) return;
+            using var highlight = new SolidBrush(Palette.Highlight);
+            using var marker = Ui.Rounded(r, 2);
+            g.FillPath(highlight, marker);
+        }
+        void CenterButton(float x, float y, float angle, PadButton? button, Action<Pen> icon)
+        {
+            var state = g.Save();
+            g.TranslateTransform(x, y);
+            g.RotateTransform(angle);
+            bool lit = button is PadButton control && standard.IsDown(control);
+            using var plate = Ui.Rounded(new RectangleF(-7, -3.5f, 14, 7), 3.5f);
+            using var stroke = new Pen(lit ? Palette.HighlightText : Palette.Muted, .75f);
+            Shape(plate, lit ? 13 : 0);
+            icon(stroke);
+            g.Restore(state);
+        }
+        void FrontShoulder(bool right, int pressure, PadButton bumper)
+        {
+            using var trigger = new GraphicsPath();
+            trigger.StartFigure();
+            trigger.AddBezier(34, 10, 35, -1, 37, -12, 42, -19);
+            trigger.AddLine(42, -19, 58, -19);
+            trigger.AddLine(58, -19, 58, 7);
+            trigger.CloseFigure();
+            using var shoulder = new GraphicsPath();
+            shoulder.StartFigure();
+            shoulder.AddBezier(23, 27, 31, 17, 51, 12, 65, 12);
+            shoulder.AddBezier(65, 12, 70, 12, 74, 14, 78, 18);
+            shoulder.AddLine(78, 18, 73, 22);
+            shoulder.AddBezier(73, 22, 65, 16, 37, 24, 23, 32);
+            shoulder.CloseFigure();
+            if (right)
+            {
+                using var mirror = new Matrix(-1, 0, 0, 1, 210, 0);
+                trigger.Transform(mirror);
+                shoulder.Transform(mirror);
+            }
+            bool bumperPressed = standard.IsDown(bumper);
+            Shape(trigger, pressure);
+            Shape(shoulder, bumperPressed ? 13 : 0);
+            Legend(right ? "RT" : "LT", new RectangleF(right ? 152 : 34, -11, 24, 16), pressure >= 6);
+            Legend(right ? "RB" : "LB", new RectangleF(right ? 146 : 44, 13, 20, 10), bumperPressed);
+        }
+
+        g.FillPath(fill, body);
+        g.DrawPath(rim, body);
+        if (rear)
+        {
+            Pill(new RectangleF(62, 13, 20, 10), "RM", down[3]);
+            Pill(new RectangleF(128, 13, 20, 10), "LM", down[2]);
+            g.DrawLines(detail, [new(54, 23), new(45, 84), new(64, 107)]);
+            g.DrawLines(detail, [new(156, 23), new(165, 84), new(146, 107)]);
+            using var port = Ui.Rounded(new RectangleF(95, 14, 20, 5), 2);
+            Shape(port);
+            using var toggleLeft = Ui.Rounded(new RectangleF(65, 49, 6, 13), 3);
+            using var toggleRight = Ui.Rounded(new RectangleF(139, 49, 6, 13), 3);
+            g.DrawPath(detail, toggleLeft);
+            g.DrawPath(detail, toggleRight);
+            using var m1 = new GraphicsPath();
+            m1.AddPolygon([new(50, 79), new(56, 70), new(70, 77), new(70, 86), new(54, 87)]);
+            using var m2 = new GraphicsPath();
+            m2.AddPolygon([new(160, 79), new(154, 70), new(140, 77), new(140, 86), new(156, 87)]);
+            Shape(m1, down[4] ? 13 : 0);
+            Shape(m2, down[5] ? 13 : 0);
+            Legend("M1", new RectangleF(51, 73, 20, 14), down[4]);
+            Legend("M2", new RectangleF(139, 73, 20, 14), down[5]);
+        }
+        else
+        {
+            FrontShoulder(false, standard.LeftTrigger, PadButton.LeftBumper);
+            FrontShoulder(true, standard.RightTrigger, PadButton.RightBumper);
+            g.DrawLines(detail, [new(72, 16), new(100, 47), new(105, 50), new(110, 47), new(138, 16)]);
+            Circle(105, 30, 5.5f);
+            g.DrawBezier(detail, 102, 27, 105, 27, 107, 31, 108, 33);
+            g.DrawBezier(detail, 108, 27, 105, 27, 103, 31, 102, 33);
+            Stick(55, 48, standard.LeftStick, PadButton.LeftStick);
+            Stick(129, 79, standard.RightStick, PadButton.RightStick);
+            Circle(80, 79, 17);
+            using var cross = new GraphicsPath();
+            cross.AddPolygon([new(76, 65), new(84, 65), new(84, 75), new(94, 75),
+                new(94, 83), new(84, 83), new(84, 93), new(76, 93), new(76, 83),
+                new(66, 83), new(66, 75), new(76, 75)]);
+            Shape(cross);
+            Direction(80, 70, PadButton.Up);
+            Direction(80, 88, PadButton.Down);
+            Direction(71, 79, PadButton.Left);
+            Direction(89, 79, PadButton.Right);
+            Circle(154, 36, 6.7f, "Y", standard.IsDown(PadButton.Y));
+            Circle(141, 49, 6.7f, "X", standard.IsDown(PadButton.X));
+            Circle(167, 49, 6.7f, "B", standard.IsDown(PadButton.B));
+            Circle(154, 62, 6.7f, "A", standard.IsDown(PadButton.A));
+            Circle(162, 83, 6.7f, "C", down[0]);
+            Circle(175, 73, 6.7f, "Z", down[1]);
+            CenterButton(89, 45, 45, PadButton.View, pen =>
+            {
+                g.DrawRectangle(pen, -2.7f, -.4f, 3.1f, 2);
+                g.DrawLines(pen, (PointF[])[new(-.8f, -.8f), new(-.8f, -1.7f), new(2.5f, -1.7f), new(2.5f, .5f), new(1, .5f)]);
+            });
+            CenterButton(121, 45, -45, PadButton.Menu, pen =>
+            {
+                for (int y = -2; y <= 2; y += 2) g.DrawLine(pen, -2.5f, y, 2.5f, y);
+            });
+            CenterButton(105, 56, 0, null, pen =>
+            {
+                g.DrawLines(pen, (PointF[])[new(-2.7f, .2f), new(-2.7f, 1.8f), new(2.7f, 1.8f), new(2.7f, .2f)]);
+                g.DrawLine(pen, 0, .8f, 0, -2.2f);
+                g.DrawLines(pen, (PointF[])[new(-1.6f, -.5f), new(0, -2.2f), new(1.6f, -.5f)]);
+            });
+            g.DrawArc(detail, 91, 103, 6, 5, 12, 148);
+            g.DrawArc(detail, 91, 103, 6, 5, 192, 148);
+            g.DrawEllipse(detail, 102, 105, 6, 3);
+            g.DrawArc(detail, 113, 103, 5, 5, 0, 180);
+            g.DrawLine(detail, 115.5f, 108, 115.5f, 109);
+            g.DrawLine(detail, 113, 108, 118, 103);
+        }
+        g.DrawString(rear ? "REAR" : "FRONT", caption, ink, new RectangleF(0, 136, 210, 15), center);
     }
 }
